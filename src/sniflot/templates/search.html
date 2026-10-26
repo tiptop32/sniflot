@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% from "_macros.html" import results with context %}
+{% block title %}Поиск{% endblock %}
+{% block content %}
+<form action="/search" method="get" class="filters">
+  <input name="q" value="{{ form.q }}" placeholder="Запрос или ссылка на поиск площадки" required class="wide">
+  <fieldset class="row">
+    {% for sid, s in sources.items() %}
+      <label><input type="checkbox" name="sources" value="{{ sid }}" {% if sid in form.sources %}checked{% endif %}> {{ s.info.name }}</label>
+    {% endfor %}
+  </fieldset>
+  <div class="grid">
+    <label>Цена от <input name="min_price" value="{{ form.min_price }}" inputmode="numeric"></label>
+    <label>до <input name="max_price" value="{{ form.max_price }}" inputmode="numeric"></label>
+    <label>Регион <input name="region" value="{{ form.region }}" placeholder="по умолчанию"></label>
+    <label>Состояние
+      <select name="condition">
+        {% for v, t in [('any', 'любое'), ('new', 'новое'), ('used', 'б/у')] %}<option value="{{ v }}" {% if form.condition == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select></label>
+    <label>Исключить слова <input name="exclude" value="{{ form.exclude }}" placeholder="чехол, копия"></label>
+    <label>Сортировка
+      <select name="sort">{% for k, t in sort_labels.items() %}<option value="{{ k }}" {% if form.sort == k %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+    <label>Вид
+      <select name="view"><option value="table" {% if form.view == 'table' %}selected{% endif %}>таблица</option><option value="cards" {% if form.view == 'cards' %}selected{% endif %}>карточки</option></select></label>
+  </div>
+  <button>Искать</button>
+</form>
+
+{% if outcome %}
+  {% for sid, e in outcome.errors.items() %}<div class="flash bad">{{ sources[sid].info.name if sid in sources else sid }}: {{ e }}</div>{% endfor %}
+  {% for w in outcome.warnings %}<div class="flash warn">{{ w }}</div>{% endfor %}
+  <p class="muted">Найдено: {{ outcome.rows|length }}.
+  {% for sid, url in outcome.source_urls.items() %}<a href="{{ url }}" target="_blank" rel="noopener">{{ sources[sid].info.name }} ↗</a> {% endfor %}</p>
+
+  <details class="save">
+    <summary>Сохранить как поиск и следить за новыми объявлениями</summary>
+    <form action="/searches" method="post" class="grid">
+      <input type="hidden" name="query" value="{{ form.q }}">
+      {% for sid in form.sources %}<input type="hidden" name="sources" value="{{ sid }}">{% endfor %}
+      <input type="hidden" name="min_price" value="{{ form.min_price }}">
+      <input type="hidden" name="max_price" value="{{ form.max_price }}">
+      <input type="hidden" name="region" value="{{ form.region }}">
+      <input type="hidden" name="condition" value="{{ form.condition }}">
+      <input type="hidden" name="exclude_words" value="{{ form.exclude }}">
+      <input type="hidden" name="sort" value="newest">
+      <label>Название <input name="name" value="{{ form.q[:80] }}"></label>
+      <label>Проверять каждые, мин <input name="interval_minutes" value="30" inputmode="numeric"></label>
+      <label>Уведомлять о снижении от, % <input name="notify_drop_pct" value="5" inputmode="decimal"></label>
+      <label class="check"><input type="checkbox" name="notify_new" checked> о новых объявлениях</label>
+      <button>Сохранить</button>
+    </form>
+  </details>
+
+  {{ results(outcome.rows, form.view) }}
+{% endif %}
+{% endblock %}

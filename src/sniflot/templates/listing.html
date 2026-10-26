@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badges, fav_button with context %}
+{% block title %}{{ listing.title[:60] }}{% endblock %}
+{% block content %}
+<article class="listing{% if not listing.image_url %} noimg{% endif %}">
+  {% if listing.image_url %}<img src="{{ listing.image_url }}" alt="" referrerpolicy="no-referrer">{% endif %}
+  <div>
+    <h1>{{ listing.title }}</h1>
+    <div class="price big">{{ rub(listing.price) }}{% if listing.old_price %} <s class="muted">{{ rub(listing.old_price) }}</s>{% endif %}</div>
+    <div class="meta">{{ badges(listing) }} {{ fav_button(listing) }}</div>
+    <dl>
+      {% if listing.brand %}<dt>Бренд</dt><dd>{{ listing.brand }}</dd>{% endif %}
+      {% if listing.seller %}<dt>Продавец</dt><dd>{{ listing.seller }}</dd>{% endif %}
+      {% if listing.location %}<dt>Где</dt><dd>{{ listing.location }}</dd>{% endif %}
+      {% if listing.rating %}<dt>Рейтинг</dt><dd>★ {{ listing.rating }}{% if listing.reviews %} · {{ listing.reviews }} отзывов{% endif %}</dd>{% endif %}
+      {% if listing.published_at %}<dt>Опубликовано</dt><dd>{{ dt(listing.published_at, '%d.%m.%Y %H:%M') }}</dd>{% endif %}
+      <dt>Впервые увидели</dt><dd>{{ dt(listing.first_seen_at, '%d.%m.%Y %H:%M') }}</dd>
+      <dt>Последний раз</dt><dd>{{ dt(listing.last_seen_at, '%d.%m.%Y %H:%M') }}</dd>
+    </dl>
+    <p><a href="{{ listing.url }}" target="_blank" rel="noopener">Открыть на сайте ↗</a></p>
+  </div>
+</article>
+
+<h2>История цены</h2>
+{{ chart|safe }}
+<p class="muted">Экспорт: <a href="/api/v1/listings/{{ listing.id }}/history.csv">CSV</a> · <a href="/api/v1/listings/{{ listing.id }}/history.json">JSON</a></p>
+
+<h2>Отслеживание</h2>
+{% if watch %}
+  <p class="muted">Проверено {{ dt(watch.last_run_at) }} · {{ status_labels.get(watch.last_status, watch.last_status or 'ещё не проверялось') }} · следующая проверка {{ dt(watch.next_run_at) if watch.enabled else '—' }}</p>
+  {% if watch.last_error %}<div class="flash bad">{{ watch.last_error }}</div>{% endif %}
+  <form method="post" action="/watches/{{ watch.id }}" class="grid">
+    <label>Целевая цена, ₽ <input name="target_price" value="{{ (watch.target_price // 100) if watch.target_price else '' }}" inputmode="numeric"></label>
+    <label>Снижение от, % <input name="drop_pct" value="{{ watch.drop_pct }}" inputmode="decimal"></label>
+    <label>Каждые, мин <input name="interval_minutes" value="{{ watch.interval_minutes }}" inputmode="numeric"></label>
+    <label class="check"><input type="checkbox" name="enabled" {% if watch.enabled %}checked{% endif %}> включено</label>
+    <button>Сохранить</button>
+  </form>
+  <div class="row">
+    <form method="post" action="/watches/{{ watch.id }}/check"><button>Проверить сейчас</button></form>
+    <form method="post" action="/watches/{{ watch.id }}/delete"><button class="danger">Не отслеживать</button></form>
+  </div>
+{% else %}
+  <form method="post" action="/watches" class="grid">
+    <input type="hidden" name="listing_id" value="{{ listing.id }}">
+    <label>Целевая цена, ₽ <input name="target_price" inputmode="numeric"></label>
+    <label>Снижение от, % <input name="drop_pct" value="1" inputmode="decimal"></label>
+    <label>Каждые, мин <input name="interval_minutes" value="60" inputmode="numeric"></label>
+    <button>Следить за ценой</button>
+  </form>
+{% endif %}
+
+{% if history %}
+<details>
+  <summary>Изменения ({{ history|length }})</summary>
+  <table>
+    <thead><tr><th>Когда</th><th>Цена</th><th>Наличие</th></tr></thead>
+    <tbody>{% for p in history %}<tr><td>{{ dt(p.at, '%d.%m.%Y %H:%M') }}</td><td class="num">{{ rub(p.price) }}</td><td>{{ {True: 'есть', False: 'нет', None: '—'}[p.available] }}</td></tr>{% endfor %}</tbody>
+  </table>
+</details>
+{% endif %}
+{% endblock %}

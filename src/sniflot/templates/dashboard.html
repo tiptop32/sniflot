@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badges with context %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+<section class="quick">
+  <form action="/search" method="get" class="row">
+    <input name="q" placeholder="Что ищем?" required>
+    <button>Найти</button>
+  </form>
+  <form action="/watches" method="post" class="row">
+    <input name="url" placeholder="Ссылка на товар или объявление" required>
+    <button>Следить</button>
+  </form>
+</section>
+
+<h2>Отслеживаемые карточки <span class="muted">({{ watches|length }})</span></h2>
+{% if watches %}
+<div class="cards">
+{% for w, l, spark in watches %}
+  <article class="card {% if not w.enabled %}off{% endif %}">
+    <div class="price">{{ rub(l.price) }}{% if w.target_price %} <span class="muted">цель {{ rub(w.target_price) }}</span>{% endif %}</div>
+    <a href="/listings/{{ l.id }}">{{ l.title }}</a>
+    <div class="meta">{{ badges(l) }}</div>
+    {{ spark|safe }}
+    <div class="meta muted">проверено {{ dt(w.last_run_at) }} · {{ status_labels.get(w.last_status, w.last_status or 'ещё не проверялось') }}</div>
+  </article>
+{% endfor %}
+</div>
+{% else %}
+<p class="muted">Пока ничего. Вставьте ссылку выше или используйте bookmarklet из <a href="/settings">настроек</a>.</p>
+{% endif %}
+
+<h2>Сохранённые поиски <span class="muted">({{ searches|length }})</span></h2>
+{% if searches %}
+<div class="scroll">
+<table>
+  <thead><tr><th>Название</th><th>Источники</th><th>Цена</th><th>Каждые</th><th>Последний прогон</th><th>Следующий</th></tr></thead>
+  <tbody>
+  {% for s in searches %}
+    <tr class="{% if not s.enabled %}off{% endif %}">
+      <td><a href="/searches/{{ s.id }}">{{ s.name }}</a></td>
+      <td>{{ s.sources|join(', ') }}</td>
+      <td class="nowrap">{{ s.min_price or '' }}{% if s.min_price or s.max_price %}–{% endif %}{{ s.max_price or '' }}</td>
+      <td>{{ s.interval_minutes }} мин</td>
+      <td>{{ dt(s.last_run_at) }} {% if s.last_status %}<span class="tag {{ 'good' if s.last_status == 'ok' else 'bad' }}">{{ status_labels.get(s.last_status, s.last_status) }}</span>{% endif %}</td>
+      <td>{{ dt(s.next_run_at) if s.enabled else 'выключен' }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="muted">Найдите что-нибудь и нажмите «Сохранить как поиск» — новые объявления будут приходить в Telegram.</p>
+{% endif %}
+
+<h2>Источники</h2>
+<ul class="plain">
+{% for s, st in states %}
+  <li><b>{{ s.info.name }}</b>{% if s.info.experimental %} <span class="tag warn">эксперимент</span>{% endif %}
+    {% if st.paused(now) %}<span class="tag bad">пауза до {{ dt(st.paused_until) }}</span>
+    {% elif st.last_ok_at %}<span class="tag good">ок {{ dt(st.last_ok_at) }}</span>{% endif %}
+    {% if st.last_error %}<span class="muted">последняя ошибка: {{ st.last_error }} ({{ dt(st.last_error_at) }})</span>{% endif %}
+  </li>
+{% else %}
+  <li class="muted">Нет включённых источников.</li>
+{% endfor %}
+{% for sid, reason in unavailable.items() %}
+  <li><b>{{ sid }}</b> <span class="tag bad">недоступен</span> <span class="muted">{{ reason }}</span></li>
+{% endfor %}
+</ul>
+
+<h2>События</h2>
+<ul class="events">
+{% for e in events %}
+  <li><span class="muted nowrap">{{ dt(e.at) }}</span> {{ e.text|replace('\n', ' ')|striptags }}{% if not e.delivered %} <span class="tag warn" title="{{ e.error or '' }}">не доставлено</span>{% endif %}</li>
+{% else %}
+  <li class="muted">Событий пока нет.</li>
+{% endfor %}
+</ul>
+{% endblock %}

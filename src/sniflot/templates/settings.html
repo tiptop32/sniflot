@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block content %}
+<h1>Настройки</h1>
+
+<h2>Источники</h2>
+<div class="scroll">
+<table>
+  <thead><tr><th>Источник</th><th>Состояние</th><th>Ограничения</th><th></th></tr></thead>
+  <tbody>
+  {% for s, st in states %}
+    <tr>
+      <td><b>{{ s.info.name }}</b>{% if s.info.experimental %} <span class="tag warn">эксперимент</span>{% endif %}</td>
+      <td>
+        {% if st.paused(now) %}<span class="tag bad">пауза до {{ dt(st.paused_until) }}</span>{% elif st.last_ok_at %}<span class="tag good">ок {{ dt(st.last_ok_at) }}</span>{% else %}<span class="muted">не опрашивался</span>{% endif %}
+        {% if st.last_error %}<div class="muted">{{ st.last_error }} ({{ dt(st.last_error_at) }})</div>{% endif %}
+      </td>
+      <td class="muted">{{ s.info.notes }}</td>
+      <td>{% if st.paused(now) %}<form method="post" action="/sources/{{ s.info.id }}/resume"><button>Снять паузу</button></form>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  {% for sid, reason in unavailable.items() %}
+    <tr><td><b>{{ sid }}</b></td><td><span class="tag bad">недоступен</span></td><td class="muted">{{ reason }}</td><td></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted">Источники включаются переменными окружения: <code>SNIFLOT_AVITO_ENABLED</code>, <code>SNIFLOT_OZON_ENABLED</code>, <code>SNIFLOT_WB_ENABLED</code>; загрузка Avito через браузер — <code>SNIFLOT_AVITO_BACKEND=browser</code>.</p>
+
+<h2>Уведомления</h2>
+<p>Канал: <b>{{ notifier }}</b>{% if notifier == 'log' %} — Telegram не настроен, события пишутся только в журнал и на дашборд. Задайте <code>SNIFLOT_TELEGRAM_BOT_TOKEN</code> и <code>SNIFLOT_TELEGRAM_CHAT_ID</code>.{% endif %}</p>
+<form method="post" action="/notify/test"><button>Отправить тестовое уведомление</button></form>
+
+<h2>Быстрое добавление</h2>
+<p>Перетащите ссылку на панель закладок браузера, затем нажимайте её на странице товара:
+  <a class="bookmarklet" href="{{ bookmarklet }}">+ sniflot</a></p>
+
+<h2>API</h2>
+<p><a href="/docs">OpenAPI / Swagger</a> · <a href="/api/v1/health">health</a></p>
+{% endblock %}

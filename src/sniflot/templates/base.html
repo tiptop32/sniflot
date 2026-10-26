@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}sniflot{% endblock %} · sniflot</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="/">sniflot</a>
+  <nav>
+    <a href="/">Дашборд</a>
+    <a href="/search">Поиск</a>
+    <a href="/favorites">Избранное</a>
+    <a href="/add">Добавить</a>
+    <a href="/settings">Настройки</a>
+  </nav>
+</header>
+<main>
+  {% if msg %}<div class="flash ok">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="flash bad">{{ err }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

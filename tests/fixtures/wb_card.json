@@ -1,0 +1,5 @@
+{"products": [
+  {"id": 111111, "brand": "Sonic", "name": "Наушники беспроводные X1", "supplier": "ООО Звук",
+   "reviewRating": 4.8, "feedbacks": 1530, "totalQuantity": 9,
+   "sizes": [{"price": {"basic": 500000, "product": 329900}, "stocks": [{"wh": 1, "qty": 9}]}]}
+]}

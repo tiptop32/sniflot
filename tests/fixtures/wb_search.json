@@ -1,0 +1,14 @@
+{
+  "metadata": {"name": "наушники"},
+  "total": 3,
+  "products": [
+    {"id": 111111, "brand": "Sonic", "name": "Наушники беспроводные X1", "supplier": "ООО Звук",
+     "supplierId": 77, "reviewRating": 4.8, "feedbacks": 1520, "totalQuantity": 14,
+     "sizes": [{"price": {"basic": 500000, "product": 349900}},
+               {"price": {"basic": 500000, "product": 359900}}]},
+    {"id": 222222, "brand": "", "name": "Наушники проводные  с микрофоном", "supplier": "ИП Иванов",
+     "reviewRating": 4.1, "feedbacks": 12, "totalQuantity": 0, "sizes": [{"price": {}}]},
+    {"id": 333333, "brand": "Sonic", "name": "Sonic чехол для наушников", "totalQuantity": 3,
+     "salePriceU": 49000, "priceU": 99000}
+  ]
+}

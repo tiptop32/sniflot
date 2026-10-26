@@ -1,0 +1,51 @@
+{% macro badges(listing, row=None) -%}
+  <span class="tag src-{{ listing.source }}">{{ sources[listing.source].info.name if listing.source in sources else listing.source }}</span>
+  {%- if listing.status == 'gone' %} <span class="tag bad">снято</span>{% endif %}
+  {%- if listing.available is false and listing.status != 'gone' %} <span class="tag warn">нет в наличии</span>{% endif %}
+  {%- if row and row.peer.suspicious %} <span class="tag bad" title="Цена ниже 40% медианы выдачи">подозрительно дёшево</span>{% endif %}
+  {%- if row and row.peer.score is not none and row.peer.score >= 0.15 and not row.peer.suspicious %} <span class="tag good" title="Ниже медианы выдачи">−{{ (row.peer.score * 100)|round|int }}% к медиане</span>{% endif %}
+  {%- if row and row.history is not none and row.history >= 0.05 %} <span class="tag good" title="Ниже медианы своей истории">−{{ (row.history * 100)|round|int }}% к истории</span>{% endif %}
+{%- endmacro %}
+
+{% macro fav_button(listing) -%}
+<form method="post" action="/listings/{{ listing.id }}/favorite" class="inline">
+  <button class="icon" title="Избранное">{{ '★' if listing.favorite else '☆' }}</button>
+</form>
+{%- endmacro %}
+
+{% macro results(rows, view) -%}
+{% if not rows %}
+  <p class="muted">Ничего не найдено.</p>
+{% elif view == 'cards' %}
+  <div class="cards">
+  {% for r in rows %}{% set l = r.listing %}
+    <article class="card">
+      {% if l.image_url %}<img src="{{ l.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
+      <div class="price">{{ rub(l.price) }}{% if l.old_price %} <s>{{ rub(l.old_price) }}</s>{% endif %}</div>
+      <a href="/listings/{{ l.id }}">{{ l.title }}</a>
+      <div class="meta">{{ badges(l, r) }}</div>
+      <div class="meta muted">{{ l.location or l.seller or '' }}</div>
+      <div class="actions">{{ fav_button(l) }} <a href="{{ l.url }}" target="_blank" rel="noopener">на сайте ↗</a></div>
+    </article>
+  {% endfor %}
+  </div>
+{% else %}
+  <div class="scroll">
+  <table class="results">
+    <thead><tr><th></th><th>Цена</th><th>Название</th><th>Где / продавец</th><th>Оценки</th><th>Впервые</th></tr></thead>
+    <tbody>
+    {% for r in rows %}{% set l = r.listing %}
+      <tr>
+        <td>{{ fav_button(l) }}</td>
+        <td class="num">{{ rub(l.price) }}{% if l.old_price %}<br><s class="muted">{{ rub(l.old_price) }}</s>{% endif %}</td>
+        <td><a href="/listings/{{ l.id }}">{{ l.title }}</a> <a href="{{ l.url }}" target="_blank" rel="noopener" title="Открыть на сайте">↗</a></td>
+        <td class="muted">{{ l.location or l.seller or '' }}{% if l.rating %} · ★{{ l.rating }}{% if l.reviews %} ({{ l.reviews }}){% endif %}{% endif %}</td>
+        <td>{{ badges(l, r) }}</td>
+        <td class="muted nowrap">{{ dt(l.published_at or l.first_seen_at) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+{% endif %}
+{%- endmacro %}

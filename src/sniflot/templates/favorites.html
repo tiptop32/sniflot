@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% from "_macros.html" import results with context %}
+{% block title %}Избранное{% endblock %}
+{% block content %}
+<h1>Избранное</h1>
+{{ results(rows, 'cards') }}
+{% endblock %}
