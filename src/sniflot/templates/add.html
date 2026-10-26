@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Добавить{% endblock %}
+{% block content %}
+<h1>Следить за товаром</h1>
+<form method="post" action="/watches" class="grid">
+  <label class="wide">Ссылка <input name="url" value="{{ url }}" required placeholder="https://www.wildberries.ru/catalog/…/detail.aspx"></label>
+  <label>Целевая цена, ₽ <input name="target_price" inputmode="numeric"></label>
+  <label>Снижение от, % <input name="drop_pct" value="1" inputmode="decimal"></label>
+  <label>Каждые, мин <input name="interval_minutes" value="60" inputmode="numeric"></label>
+  <button>Добавить</button>
+</form>
+<p class="muted">Поддерживаются ссылки: {% for s in sources.values() %}{{ s.info.name }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{% endblock %}

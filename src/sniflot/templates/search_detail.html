@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import results with context %}
+{% block title %}{{ search.name }}{% endblock %}
+{% block content %}
+<h1>{{ search.name }}</h1>
+<p class="muted">
+  Последний прогон: {{ dt(search.last_run_at) }}
+  {% if search.last_status %}<span class="tag {{ 'good' if search.last_status == 'ok' else 'bad' }}">{{ status_labels.get(search.last_status, search.last_status) }}</span>{% endif %}
+  · следующий: {{ dt(search.next_run_at) if search.enabled else 'выключен' }}
+  {% if not search.baseline_done %}· <span class="tag warn">первый прогон запишет базовую линию без уведомлений</span>{% endif %}
+</p>
+{% if search.last_error %}<div class="flash bad">{{ search.last_error }}</div>{% endif %}
+
+<div class="row">
+  <form method="post" action="/searches/{{ search.id }}/run"><button>Проверить сейчас</button></form>
+  <form method="post" action="/searches/{{ search.id }}/delete" onsubmit="return confirm('Удалить поиск?')"><button class="danger">Удалить</button></form>
+</div>
+
+<details>
+  <summary>Параметры поиска и уведомлений</summary>
+  <form method="post" action="/searches/{{ search.id }}" class="grid">
+    <label>Название <input name="name" value="{{ search.name }}"></label>
+    <label class="wide">Запрос или ссылка <input name="query" value="{{ search.query }}" required></label>
+    <fieldset class="row">
+      {% for sid, s in sources.items() %}
+        <label><input type="checkbox" name="sources" value="{{ sid }}" {% if sid in search.sources %}checked{% endif %}> {{ s.info.name }}</label>
+      {% endfor %}
+    </fieldset>
+    <label>Цена от <input name="min_price" value="{{ search.min_price or '' }}" inputmode="numeric"></label>
+    <label>до <input name="max_price" value="{{ search.max_price or '' }}" inputmode="numeric"></label>
+    <label>Регион <input name="region" value="{{ search.region or '' }}"></label>
+    <label>Состояние
+      <select name="condition">
+        {% for v, t in [('any', 'любое'), ('new', 'новое'), ('used', 'б/у')] %}<option value="{{ v }}" {% if search.condition == v %}selected{% endif %}>{{ t }}</option>{% endfor %}
+      </select></label>
+    <label>Сортировка на площадке
+      <select name="sort">{% for k in ['newest', 'relevance', 'price_asc', 'price_desc'] %}<option value="{{ k }}" {% if search.sort == k %}selected{% endif %}>{{ sort_labels[k] }}</option>{% endfor %}</select></label>
+    <label>Исключить слова <input name="exclude_words" value="{{ search.exclude_words|join(', ') }}"></label>
+    <label>Страниц выдачи <input name="pages" value="{{ search.pages }}" inputmode="numeric"></label>
+    <label>Каждые, мин <input name="interval_minutes" value="{{ search.interval_minutes }}" inputmode="numeric"></label>
+    <label>Снижение цены от, % <input name="notify_drop_pct" value="{{ search.notify_drop_pct }}" inputmode="decimal"></label>
+    <label class="check"><input type="checkbox" name="notify_new" {% if search.notify_new %}checked{% endif %}> уведомлять о новых</label>
+    <label class="check"><input type="checkbox" name="enabled" {% if search.enabled %}checked{% endif %}> включён</label>
+    <button>Сохранить</button>
+  </form>
+</details>
+
+<form method="get" class="row">
+  <label>Сортировка <select name="sort" onchange="this.form.submit()">{% for k, t in sort_labels.items() %}<option value="{{ k }}" {% if sort == k %}selected{% endif %}>{{ t }}</option>{% endfor %}</select></label>
+  <label>Вид <select name="view" onchange="this.form.submit()"><option value="table" {% if view == 'table' %}selected{% endif %}>таблица</option><option value="cards" {% if view == 'cards' %}selected{% endif %}>карточки</option></select></label>
+  <noscript><button>Применить</button></noscript>
+</form>
+<p class="muted">Объявлений в истории поиска: {{ rows|length }}</p>
+{{ results(rows, view) }}
+{% endblock %}
