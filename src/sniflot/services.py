@@ -296,12 +296,18 @@ class Service:
         all_failed = bool(outcome.errors) and len(outcome.errors) >= len(
             [s for s in search.sources if s in self.sources] or [None]
         )
+        # Each source gets its own baseline: its first successful run only records
+        # what exists. Otherwise a source that was paused (or added) later would
+        # report its whole result list as "new".
+        known = set(search.baseline_sources)
         new_items: list[Listing] = []
         drops: list[tuple[Listing, int]] = []
         for row in outcome.rows:
             first, last_price = self.repo.record_hit(
                 search.id, row.listing.id, row.listing.price, now
             )
+            if row.listing.source not in known:
+                continue
             if first:
                 new_items.append(row.listing)
             elif (
@@ -311,7 +317,7 @@ class Service:
             ):
                 drops.append((row.listing, last_price))
 
-        if search.baseline_done and search.notify_new and new_items:
+        if search.notify_new and new_items:
             report.new = len(new_items)
             shown = new_items[:MAX_ITEMS_PER_MESSAGE]
             await self.notify(
@@ -319,7 +325,7 @@ class Service:
                 messages.new_listings(search.name, shown, len(new_items) - len(shown)),
                 search_id=search.id,
             )
-        if search.baseline_done and search.notify_drop_pct > 0:
+        if search.notify_drop_pct > 0:
             for listing, old in drops[:MAX_DROP_MESSAGES]:
                 report.drops += 1
                 await self.notify(
@@ -342,8 +348,7 @@ class Service:
             last_status=report.status,
             last_error=error_text,
             next_run_at=self._next_run(now, search.interval_minutes),
-            # The first successful run only records what exists; nothing is "new" yet.
-            baseline_done=search.baseline_done or not all_failed,
+            baseline_sources=sorted(known | set(outcome.source_urls)),
         )
         return report
 

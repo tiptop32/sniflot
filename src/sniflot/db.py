@@ -62,7 +62,7 @@ MIGRATIONS: list[str] = [
         enabled INTEGER NOT NULL DEFAULT 1,
         notify_new INTEGER NOT NULL DEFAULT 1,
         notify_drop_pct REAL NOT NULL DEFAULT 5,
-        baseline_done INTEGER NOT NULL DEFAULT 0,
+        baseline_sources TEXT NOT NULL DEFAULT '[]',
         next_run_at TEXT NOT NULL,
         last_run_at TEXT,
         last_status TEXT,

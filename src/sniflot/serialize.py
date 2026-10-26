@@ -69,6 +69,7 @@ def search(s: Search) -> dict[str, Any]:
         "enabled": s.enabled,
         "notify_new": s.notify_new,
         "notify_drop_pct": s.notify_drop_pct,
+        "baseline_sources": s.baseline_sources,
         "next_run_at": iso(s.next_run_at),
         "last_run_at": iso(s.last_run_at),
         "last_status": s.last_status,

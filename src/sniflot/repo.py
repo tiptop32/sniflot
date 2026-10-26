@@ -122,7 +122,7 @@ class Search:
     enabled: bool
     notify_new: bool
     notify_drop_pct: float
-    baseline_done: bool
+    baseline_sources: list[str]
     next_run_at: datetime
     last_run_at: datetime | None
     last_status: str | None
@@ -147,13 +147,17 @@ class Search:
             enabled=bool(row["enabled"]),
             notify_new=bool(row["notify_new"]),
             notify_drop_pct=row["notify_drop_pct"],
-            baseline_done=bool(row["baseline_done"]),
+            baseline_sources=json.loads(row["baseline_sources"]),
             next_run_at=parse_iso(row["next_run_at"]) or utcnow(),
             last_run_at=parse_iso(row["last_run_at"]),
             last_status=row["last_status"],
             last_error=row["last_error"],
             created_at=parse_iso(row["created_at"]) or utcnow(),
         )
+
+    @property
+    def baseline_done(self) -> bool:
+        return bool(self.baseline_sources)
 
 
 @dataclass
@@ -231,7 +235,7 @@ _SEARCH_FIELDS = {
     "enabled",
     "notify_new",
     "notify_drop_pct",
-    "baseline_done",
+    "baseline_sources",
     "next_run_at",
     "last_run_at",
     "last_status",
@@ -252,7 +256,7 @@ _WATCH_FIELDS = {
 
 
 def _encode(key: str, value: Any) -> Any:
-    if key in ("sources", "exclude_words"):
+    if key in ("sources", "exclude_words", "baseline_sources"):
         return json.dumps(list(value), ensure_ascii=False)
     if isinstance(value, datetime):
         return iso(value)

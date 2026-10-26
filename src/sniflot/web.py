@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 from typing import Any
@@ -80,13 +81,19 @@ def _back(path: str, msg: str | None = None, err: str | None = None) -> Redirect
 
 
 def _int(value: Any) -> int | None:
-    text = str(value or "").replace(" ", "").replace(" ", "").strip()
-    return int(float(text.replace(",", "."))) if text else None
+    text = re.sub(r"[\s\u202f]", "", str(value or "")).replace(",", ".")
+    try:
+        return int(float(text)) if text else None
+    except ValueError:
+        return None
 
 
 def _float(value: Any, default: float) -> float:
     text = str(value or "").replace(",", ".").strip()
-    return float(text) if text else default
+    try:
+        return float(text) if text else default
+    except ValueError:
+        return default
 
 
 def _search_fields(form: FormData, service: Service) -> dict[str, Any]:

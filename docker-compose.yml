@@ -1,0 +1,10 @@
+services:
+  sniflot:
+    build: .
+    image: sniflot:local
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${SNIFLOT_BIND:-127.0.0.1}:8000:8000"
+    volumes:
+      - ./data:/data

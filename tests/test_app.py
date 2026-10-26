@@ -134,6 +134,7 @@ def test_basic_auth(service: Service) -> None:
     settings = Settings(scheduler_enabled=False, auth_user="me", auth_password="pw")
     with TestClient(create_app(settings, service)) as c:
         assert c.get("/api/v1/health").status_code == 401
+        assert c.get("/healthz").status_code == 200
         token = base64.b64encode(b"me:pw").decode()
         assert (
             c.get("/api/v1/health", headers={"Authorization": f"Basic {token}"}).status_code == 200
@@ -153,3 +154,12 @@ def test_mcp_tools_registered(service: Service) -> None:
 
 def test_clock_fixture_is_used(clock: Clock, service: Service) -> None:
     assert service.clock() == clock.now
+
+
+def test_bad_form_numbers_do_not_crash(client: TestClient) -> None:
+    response = client.post(
+        "/searches",
+        data={"query": "x", "max_price": "abc", "interval_minutes": "?", "notify_drop_pct": "n"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303

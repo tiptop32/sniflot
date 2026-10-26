@@ -74,6 +74,8 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
         async def basic_auth(
             request: Request, call_next: Callable[[Request], Awaitable[Response]]
         ) -> Response:
+            if request.url.path == "/healthz":
+                return await call_next(request)
             header = request.headers.get("Authorization", "")
             scheme, _, value = header.partition(" ")
             if scheme.lower() != "basic" or not secrets.compare_digest(value, expected):
@@ -83,6 +85,10 @@ def create_app(settings: Settings | None = None, service: Service | None = None)
                     headers={"WWW-Authenticate": 'Basic realm="sniflot"'},
                 )
             return await call_next(request)
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz() -> dict[str, str]:
+        return {"status": "ok"}
 
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
     app.include_router(api_router)

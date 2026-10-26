@@ -91,9 +91,11 @@ price_points    id, listing_id, at, price, available     -- только при 
 searches        id, name, query, sources(json), min_price, max_price, region,
                 condition, sort, exclude_words(json), pages,
                 interval_minutes, enabled, notify_new, notify_drop_pct,
-                next_run_at, last_run_at, last_status, last_error, baseline_done
-search_hits     search_id, listing_id, first_seen_at, last_seen_at
+                next_run_at, last_run_at, last_status, last_error,
+                baseline_sources(json)  -- источники, уже записавшие базовую линию
+search_hits     search_id, listing_id, first_seen_at, last_seen_at, last_price
 watches         id, listing_id UNIQUE, target_price, drop_pct,
+                last_price, last_available,  -- что видела эта проверка в прошлый раз
                 interval_minutes, enabled, next_run_at, last_run_at,
                 last_status, last_error
 source_state    source PK, enabled, paused_until, failures, last_ok_at, last_error
@@ -105,19 +107,24 @@ events          id, at, kind, listing_id, search_id, text, delivered, error
 
 ## Логика мониторинга
 
-- **Сохранённый поиск:** первый прогон — базовая линия, уведомлений нет.
+- **Сохранённый поиск:** первый успешный прогон каждого источника — его базовая
+  линия, уведомлений нет (источник, бывший на паузе или добавленный позже, не
+  выдаст всю выдачу как «новое»).
   Дальше: объявление, не встречавшееся в этом поиске → событие `new`;
   цена в выдаче упала на ≥ `notify_drop_pct` → `price_drop`. Новые объявления
   одного прогона уходят одним сообщением.
-- **Отслеживаемая карточка:** `fetch` по расписанию; падение цены ≥ `drop_pct` или
+- **Отслеживаемая карточка:** `fetch` по расписанию; сравнение с тем, что видела
+  прошлая проверка этой карточки (а не с полем объявления, которое мог обновить
+  поиск); падение цены ≥ `drop_pct` или
   достижение `target_price` → уведомление; `NotFoundError` → статус `gone` +
   уведомление; `available` true→false → уведомление «нет в наличии».
 - **Защита от ложных срабатываний:** падение цены больше чем вдвое
   уведомляется с пометкой «подозрительно» (может быть ошибка разбора или
   мошенническое объявление).
-- **Паузы источника:** блокировка → `paused_until = now + 30 мин × 2^k`
-  (до 12 ч), одно событие «источник заблокирован», задачи источника пропускаются,
-  остальные источники работают.
+- **Паузы источника:** блокировка → `paused_until = now + base × 2^k` (base: WB
+  10 мин, Avito 1 ч; не меньше `Retry-After`; до 12 ч), одно событие «источник
+  ограничил доступ», задачи источника пропускаются без запросов, остальные
+  источники работают. Успешный ответ сбрасывает счётчик.
 - **Планировщик:** каждые 20 с выбирает задачи с `next_run_at <= now`, запускает
   по одной на источник (ограничение частоты внутри `http`), ставит
   `next_run_at = now + interval ± 10 %`.

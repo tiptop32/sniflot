@@ -202,3 +202,41 @@ def test_deal_sort_puts_suspicious_last(service: Service, source: FakeSource) ->
     rows = sort_rows(service.score(listings), "deal")
     assert [r.listing.price for r in rows][:1] == [90000]
     assert rows[-1].listing.price == 30000 and rows[-1].peer.suspicious
+
+
+async def test_baseline_is_per_source(repo, notifier: FakeNotifier, clock: Clock) -> None:
+    import random
+    from pathlib import Path
+
+    from sniflot.config import Settings
+
+    a, b = FakeSource("a"), FakeSource("b")
+    service = Service(
+        Settings(db_path=Path(":memory:")),
+        repo,
+        {"a": a, "b": b},
+        notifier,
+        clock=clock,
+        rng=random.Random(1),
+    )
+    search = service.create_search(query="x")
+    a.offers = [a.offer("1", 100)]
+    b.error = BlockedError("captcha")
+    report = await service.run_search(search.id)
+    assert report.status == "partial"
+    notifier.sent.clear()
+
+    # b comes back with a long list: that is its baseline, not 3 new listings.
+    clock.advance(hours=2)
+    b.error = None
+    b.offers = [b.offer(str(i), 100) for i in range(3)]
+    a.offers = [a.offer("1", 100), a.offer("2", 100)]
+    report = await service.run_search(search.id)
+    assert report.new == 1 and "Товар 2" in notifier.sent[-1]
+    saved = service.repo.get_search(search.id)
+    assert saved is not None and saved.baseline_sources == ["a", "b"]
+
+    clock.advance(hours=1)
+    b.offers.append(b.offer("9", 100))
+    report = await service.run_search(search.id)
+    assert report.new == 1 and "Товар 9" in notifier.sent[-1]

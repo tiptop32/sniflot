@@ -7,7 +7,8 @@
   Последний прогон: {{ dt(search.last_run_at) }}
   {% if search.last_status %}<span class="tag {{ 'good' if search.last_status == 'ok' else 'bad' }}">{{ status_labels.get(search.last_status, search.last_status) }}</span>{% endif %}
   · следующий: {{ dt(search.next_run_at) if search.enabled else 'выключен' }}
-  {% if not search.baseline_done %}· <span class="tag warn">первый прогон запишет базовую линию без уведомлений</span>{% endif %}
+  {% set pending = search.sources|reject('in', search.baseline_sources)|list %}
+  {% if pending %}· <span class="tag warn">первый успешный прогон {{ pending|join(', ') }} запишет базовую линию без уведомлений</span>{% endif %}
 </p>
 {% if search.last_error %}<div class="flash bad">{{ search.last_error }}</div>{% endif %}
 
