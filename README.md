@@ -5,18 +5,20 @@
 отслеживание карточек с историей цен, Telegram, REST API и MCP для AI-агентов.
 
 Один процесс (FastAPI + фоновый планировщик), SQLite в одном файле, без
-Redis/Celery/браузера.
+Redis/Celery. Для Ozon и Avito — настоящий Chromium (Playwright) в образе `full`.
 
 ## Состояние источников
 
-| Источник | Статус | Как получает данные |
-|---|---|---|
-| Wildberries | включён | публичный JSON-поиск и карточка |
-| Avito | **экспериментально**, выключен | HTML страницы, без обхода защиты — на многих IP не работает |
-| Ozon, Яндекс Маркет | нет | нужен браузер, запланировано на v0.3 |
+| Источник | Приоритет | Как получает данные | Ограничение |
+|---|---|---|---|
+| Avito | 1 | страница в Chromium (или HTTP), данные из встроенного JSON | блокирует серверные IP; нужен домашний российский IP |
+| Ozon | 1 | страница в Chromium: состояние виджетов, DOM, JSON-LD | только образ `full`; разметка закрыта и меняется |
+| Wildberries | 2 | публичный JSON-поиск и карточка | версия эндпоинта меняется |
+| Яндекс Маркет | — | нет | следующий по плану |
 
 Ни один источник не проверен вживую из среды разработки (сетевая политика не
-пускала к площадкам). Проверьте на своём сервере командой `sniflot probe` — см.
+пускала к площадкам); браузерный слой проверен на настоящем Chromium против
+локального сервера, в том числе внутри образа `full`. Проверьте на своём сервере командой `sniflot probe` — см.
 [docs/sources.md](docs/sources.md), там же все известные ограничения.
 
 ## Возможности (v0.1)
@@ -47,22 +49,33 @@ git clone https://github.com/tiptop32/sniflot && cd sniflot
 cp .env.example .env          # Telegram, пароль, регион — по желанию
 mkdir -p data && sudo chown 1000 data
 docker compose up -d --build
-docker compose exec sniflot sniflot probe wildberries "наушники"
+docker compose exec sniflot sniflot probe avito "iphone 13"
+docker compose exec sniflot sniflot probe ozon "наушники"
 ```
+
+Два варианта образа (`SNIFLOT_TARGET` в окружении compose):
+- `full` (по умолчанию, ~1,1 ГБ сжатый) — на официальном образе Playwright,
+  Chromium работает в видимом режиме на виртуальном дисплее Xvfb; нужен для Ozon,
+  Avito тоже грузится браузером;
+- `slim` (~60 МБ) — без браузера: Wildberries и Avito по HTTP, Ozon выключен.
+
+Браузер — обычный Chromium без маскировки; его профиль (cookies) лежит в
+`data/browser`. Проверку «вы не робот» sniflot не проходит: источник встаёт на
+паузу и присылает уведомление.
 
 Интерфейс: http://127.0.0.1:8000. По умолчанию порт слушает только localhost;
 чтобы открыть его в домашней сети, задайте `SNIFLOT_BIND=0.0.0.0` в окружении
 compose **и** `SNIFLOT_AUTH_USER`/`SNIFLOT_AUTH_PASSWORD` в `.env`.
 
-Если Docker Hub ограничивает скачивание, можно взять базовый образ из зеркала:
+Если Docker Hub ограничивает скачивание образа `slim`, можно взять базовый образ из зеркала:
 `docker compose build --build-arg PYTHON_IMAGE=mirror.gcr.io/library/python:3.12-slim`.
 
 ## Запуск без Docker
 
 ```bash
 python3.11 -m venv .venv && . .venv/bin/activate
-pip install -e ".[mcp]"
-sniflot probe wildberries "наушники"   # проверка источника
+pip install -e ".[mcp,browser]" && playwright install --with-deps chromium
+sniflot probe ozon "наушники"          # проверка источника
 sniflot serve                          # UI + API + планировщик на :8000
 ```
 

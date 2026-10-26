@@ -68,6 +68,7 @@ def _render(request: Request, name: str, **context: Any) -> HTMLResponse:
             "sort_labels": SORT_LABELS,
             "status_labels": STATUS_LABELS,
             "sources": service.sources,
+            "unavailable": service.unavailable,
             "msg": request.query_params.get("msg"),
             "err": request.query_params.get("err"),
             **context,

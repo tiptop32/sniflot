@@ -14,10 +14,15 @@ from sniflot.sources.registry import build_sources
 
 async def probe(settings: Settings, source_id: str, query: str, item: str | None) -> int:
     """Talk to a real source once and print what came back — the live check."""
-    sources = build_sources(settings)
+    sources, unavailable = build_sources(settings)
     source = sources.get(source_id)
     if source is None:
-        print(f"source {source_id!r} is not enabled; enabled: {', '.join(sources) or 'none'}")
+        if source_id in unavailable:
+            print(f"source {source_id!r} is unavailable: {unavailable[source_id]}")
+        else:
+            print(f"source {source_id!r} is not enabled; enabled: {', '.join(sources) or 'none'}")
+        for other in sources.values():
+            await other.aclose()
         return 2
     code = 0
     try:
@@ -42,7 +47,8 @@ async def probe(settings: Settings, source_id: str, query: str, item: str | None
         print(f"FAILED: {exc.__class__.__name__}: {exc}")
         code = 1
     finally:
-        await source.aclose()
+        for each in sources.values():
+            await each.aclose()
     return code
 
 

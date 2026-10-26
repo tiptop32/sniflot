@@ -62,6 +62,7 @@ summary { cursor: pointer; color: var(--accent); }
 .tag.warn { color: var(--warn); border-color: var(--warn); }
 .tag.src-wildberries { color: #a23cbf; border-color: #a23cbf; }
 .tag.src-avito { color: #0a8fd8; border-color: #0a8fd8; }
+.tag.src-ozon { color: #005bff; border-color: #005bff; }
 
 .scroll { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; }

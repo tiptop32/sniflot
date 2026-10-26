@@ -19,10 +19,13 @@
       <td>{% if st.paused(now) %}<form method="post" action="/sources/{{ s.info.id }}/resume"><button>Снять паузу</button></form>{% endif %}</td>
     </tr>
   {% endfor %}
+  {% for sid, reason in unavailable.items() %}
+    <tr><td><b>{{ sid }}</b></td><td><span class="tag bad">недоступен</span></td><td class="muted">{{ reason }}</td><td></td></tr>
+  {% endfor %}
   </tbody>
 </table>
 </div>
-<p class="muted">Источники включаются переменными окружения: <code>SNIFLOT_WB_ENABLED</code>, <code>SNIFLOT_AVITO_ENABLED</code>.</p>
+<p class="muted">Источники включаются переменными окружения: <code>SNIFLOT_AVITO_ENABLED</code>, <code>SNIFLOT_OZON_ENABLED</code>, <code>SNIFLOT_WB_ENABLED</code>; загрузка Avito через браузер — <code>SNIFLOT_AVITO_BACKEND=browser</code>.</p>
 
 <h2>Уведомления</h2>
 <p>Канал: <b>{{ notifier }}</b>{% if notifier == 'log' %} — Telegram не настроен, события пишутся только в журнал и на дашборд. Задайте <code>SNIFLOT_TELEGRAM_BOT_TOKEN</code> и <code>SNIFLOT_TELEGRAM_CHAT_ID</code>.{% endif %}</p>

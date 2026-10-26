@@ -1,10 +1,15 @@
 services:
   sniflot:
-    build: .
-    image: sniflot:local
+    build:
+      context: .
+      # full: Wildberries + Avito + Ozon (Chromium under Xvfb, ~1.5 GB image)
+      # slim: Wildberries + Avito over plain HTTP, no browser
+      target: ${SNIFLOT_TARGET:-full}
+    image: sniflot:${SNIFLOT_TARGET:-full}
     restart: unless-stopped
     env_file: .env
     ports:
       - "${SNIFLOT_BIND:-127.0.0.1}:8000:8000"
     volumes:
-      - ./data:/data
+      - ./data:/data   # database and the browser profile (cookies)
+    shm_size: 1gb      # Chromium needs more than Docker's default 64 MB

@@ -93,6 +93,7 @@ def health(service: Svc) -> dict[str, Any]:
     return {
         "status": "ok",
         "sources": [serialize.source(s, st) for s, st in service.source_states()],
+        "unavailable_sources": service.unavailable,
         "notifier": service.notifier.name,
     }
 

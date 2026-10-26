@@ -1,4 +1,4 @@
-"""Avito (experimental, disabled by default).
+"""Avito (priority source; not yet verified against the live site).
 
 Avito puts the page state into ``<script type="mime/invalid"
 data-mfe-state="true">`` as HTML-escaped JSON; search results live at
@@ -7,7 +7,8 @@ An older layout used ``window.__initialData__`` (URI-encoded JSON); both are
 handled by looking for the catalog block by shape.
 
 Avito protects itself (IP firewall, CAPTCHA, TLS fingerprinting). This adapter
-is deliberately polite: a plain HTTP client, long pauses between requests, no
+is deliberately polite: pages come from a plain HTTP client or a real Chromium
+(``SNIFLOT_AVITO_BACKEND=browser``), with long pauses between requests, no
 cookie farming, no proxy rotation, no CAPTCHA solving. A block page raises
 :class:`BlockedError` and the service pauses the source. On many IPs, including
 datacenter ones, Avito will simply not work — see docs/sources.md.
@@ -18,6 +19,7 @@ from __future__ import annotations
 import html as html_lib
 import json
 import re
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from typing import Any
@@ -35,6 +37,7 @@ from sniflot.sources.base import (
     SourceError,
     SourceInfo,
 )
+from sniflot.sources.browser import PageLoader
 from sniflot.sources.http import HttpClient
 
 INFO = SourceInfo(
@@ -42,8 +45,9 @@ INFO = SourceInfo(
     name="Avito",
     kind="classifieds",
     notes=(
-        "Экспериментально. Avito блокирует автоматический доступ (фаервол по IP, капча); "
-        "адаптер не обходит защиту и при блокировке ставит источник на паузу. "
+        "Не проверено вживую. Avito блокирует автоматический доступ (фаервол по IP, капча); "
+        "адаптер не обходит защиту и при блокировке ставит источник на паузу. Загрузка "
+        "страниц — HTTP или настоящий браузер (SNIFLOT_AVITO_BACKEND=browser). "
         "Для точных фильтров вставьте ссылку на поиск Avito вместо текста."
     ),
     experimental=True,
@@ -244,8 +248,17 @@ def map_item(item: dict[str, Any]) -> Offer | None:
 class AvitoSource:
     info = INFO
 
-    def __init__(self, settings: Settings, http: HttpClient | None = None) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        http: HttpClient | None = None,
+        browser: PageLoader | None = None,
+        closer: Callable[[], Awaitable[None]] | None = None,
+    ) -> None:
+        """Pages come from ``browser`` when given (a real Chromium), else plain HTTP."""
         self._settings = settings
+        self._browser = browser
+        self._closer = closer
         self._http = http or HttpClient(
             headers={
                 "User-Agent": settings.user_agent,
@@ -259,6 +272,23 @@ class AvitoSource:
 
     async def aclose(self) -> None:
         await self._http.aclose()
+        if self._closer is not None:
+            await self._closer()
+
+    async def _html(self, url: str, cache_ttl: float = 0.0) -> str:
+        if self._browser is None:
+            response = await self._http.get(url, cache_ttl=cache_ttl)
+            html = response.text
+        else:
+            page = await self._browser(url)
+            if page.status in (404, 410):
+                raise NotFoundError(f"HTTP {page.status}: {url}")
+            check_blocked(page.html)
+            if page.status in (403, 429):
+                raise BlockedError(f"Avito: HTTP {page.status}")
+            html = page.html
+        check_blocked(html)
+        return html
 
     def parse_ref(self, url: str) -> str | None:
         match = _LISTING_URL.search(url)
@@ -290,9 +320,7 @@ class AvitoSource:
         redirects = 0
         page = 0
         while next_url and page < max(1, params.pages):
-            response = await self._http.get(next_url, cache_ttl=120)
-            html = response.text
-            check_blocked(html)
+            html = await self._html(next_url, cache_ttl=120)
             states = page_state(html)
             catalog = find_catalog(states)
             if catalog is None:
@@ -315,9 +343,7 @@ class AvitoSource:
     async def fetch(self, ref: str) -> Offer:
         if not ref.startswith("http"):
             raise SourceError("для Avito нужна ссылка на объявление")
-        response = await self._http.get(ref)
-        html = response.text
-        check_blocked(html)
+        html = await self._html(ref)
         lowered = html.lower()
         if any(text in lowered for text in _GONE_TEXT):
             raise NotFoundError("объявление снято с публикации")

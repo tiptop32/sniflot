@@ -95,3 +95,23 @@ async def test_fetch_item_and_gone() -> None:
     )
     with pytest.raises(NotFoundError):
         await gone.fetch(url)
+
+
+async def test_browser_backend_uses_same_parsers() -> None:
+    from sniflot.sources.browser import Page
+
+    async def load(url: str) -> Page:
+        name = "avito_firewall.html" if "blocked" in url else "avito_catalog_p2.html"
+        return Page(url, 200, fixture_text(name))
+
+    avito = AvitoSource(Settings(), browser=load)
+    result = await avito.search(SearchParams("iphone"))
+    assert [o.external_id for o in result.offers] == ["4009999999"]
+    with pytest.raises(BlockedError):
+        await avito.search(SearchParams("https://www.avito.ru/blocked?q=x"))
+
+    async def not_found(url: str) -> Page:
+        return Page(url, 404, "")
+
+    with pytest.raises(NotFoundError):
+        await AvitoSource(Settings(), browser=not_found).fetch("https://www.avito.ru/x_4001234567")

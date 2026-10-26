@@ -37,7 +37,8 @@ def build_notifier(settings: Settings) -> Notifier:
 
 def build_service(settings: Settings) -> Service:
     repo = Repo(Database(settings.db_path))
-    return Service(settings, repo, build_sources(settings), build_notifier(settings))
+    sources, unavailable = build_sources(settings)
+    return Service(settings, repo, sources, build_notifier(settings), unavailable=unavailable)
 
 
 def create_app(settings: Settings | None = None, service: Service | None = None) -> FastAPI:

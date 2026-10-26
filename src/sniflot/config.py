@@ -57,9 +57,19 @@ class Settings:
     wb_card_url: str = "https://card.wb.ru/cards/v4/detail"
     wb_min_interval: float = 1.5
 
-    avito_enabled: bool = False
+    avito_enabled: bool = True
+    avito_backend: str = "http"  # "http" or "browser"
     avito_region: str = "all"
     avito_min_interval: float = 30.0
+
+    ozon_enabled: bool = True
+    ozon_min_interval: float = 20.0
+
+    # Real Chromium via Playwright, needed for Ozon and optional for Avito.
+    browser_headless: bool = True
+    browser_executable: str = ""
+    browser_profile_dir: Path = Path("data/browser")
+    browser_timeout: float = 45.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> Settings:
@@ -93,8 +103,19 @@ class Settings:
             wb_card_url=get("WB_CARD_URL") or cls.wb_card_url,
             wb_min_interval=_float(get("WB_MIN_INTERVAL"), cls.wb_min_interval),
             avito_enabled=_bool(get("AVITO_ENABLED"), cls.avito_enabled),
+            avito_backend=(get("AVITO_BACKEND") or cls.avito_backend).lower(),
             avito_region=get("AVITO_REGION") or cls.avito_region,
             avito_min_interval=_float(get("AVITO_MIN_INTERVAL"), cls.avito_min_interval),
+            ozon_enabled=_bool(get("OZON_ENABLED"), cls.ozon_enabled),
+            ozon_min_interval=_float(get("OZON_MIN_INTERVAL"), cls.ozon_min_interval),
+            # Headful (under Xvfb in the Docker image) when a display is available:
+            # Ozon treats headless Chromium more strictly.
+            browser_headless=_bool(get("BROWSER_HEADLESS"), not e.get("DISPLAY")),
+            browser_executable=get("BROWSER_EXECUTABLE") or "",
+            browser_profile_dir=Path(
+                get("BROWSER_PROFILE_DIR") or Path(get("DB_PATH") or cls.db_path).parent / "browser"
+            ),
+            browser_timeout=_float(get("BROWSER_TIMEOUT"), cls.browser_timeout),
         )
 
     @property

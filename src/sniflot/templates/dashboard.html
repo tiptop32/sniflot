@@ -64,6 +64,9 @@
 {% else %}
   <li class="muted">Нет включённых источников.</li>
 {% endfor %}
+{% for sid, reason in unavailable.items() %}
+  <li><b>{{ sid }}</b> <span class="tag bad">недоступен</span> <span class="muted">{{ reason }}</span></li>
+{% endfor %}
 </ul>
 
 <h2>События</h2>

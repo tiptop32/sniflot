@@ -1,7 +1,8 @@
 .PHONY: install test lint run docker
 
 install:
-	pip install -e ".[dev,mcp]"
+	pip install -e ".[dev,mcp,browser]"
+	playwright install --with-deps chromium
 
 test:
 	pytest

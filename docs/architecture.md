@@ -24,7 +24,8 @@ asyncio-цикле, SQLite в одном файле. Никаких Redis/Celery
 |---|---|---|
 | `sources/base.py` | интерфейс адаптера, параметры поиска, `Offer`, ошибки | — |
 | `sources/http.py` | `httpx` + ограничение частоты на источник, ретраи с backoff, TTL-кэш, пауза источника после блокировки | `httpx` |
-| `sources/wildberries.py`, `sources/avito.py` | получение и разбор ответа площадки в `Offer` | base, http |
+| `sources/browser.py` | общий настоящий Chromium (Playwright, постоянный профиль, одна страница за раз, паузы по источнику, без картинок) | `playwright` (опционально) |
+| `sources/avito.py`, `sources/ozon.py`, `sources/wildberries.py` | получение и разбор ответа площадки в `Offer`; Avito — HTTP или браузер, Ozon — только браузер | base, http, browser |
 | `normalize.py` | исключающие слова, фильтр цены, ключ для дедупликации/сопоставления | — |
 | `scoring.py` | выгодность относительно истории и соседей, «подозрительно дёшево» | — |
 | `db.py`, `repo.py` | схема, миграции через `PRAGMA user_version`, запросы | `sqlite3` |

@@ -110,8 +110,10 @@ class Service:
         *,
         clock: Callable[[], datetime] = utcnow,
         rng: random.Random | None = None,
+        unavailable: dict[str, str] | None = None,
     ) -> None:
         self.settings = settings
+        self.unavailable = unavailable or {}
         self.repo = repo
         self.sources = sources
         self.notifier = notifier
